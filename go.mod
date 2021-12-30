@@ -1,4 +1,4 @@
-module github.com/ncruces/go-cloudflare
+module github.com/linden/go-cloudflare
 
 go 1.15
 
