@@ -106,16 +106,42 @@ func updateIPs() []net.IPNet {
 	if time.Since(refresh) > time.Hour {
 		refresh = time.Now()
 
-		ipv4, err := loadIPs("https://www.cloudflare.com/ips-v4")
+		ipv4, err := loadIPs([]string{
+			"173.245.48.0/20", 
+			"103.21.244.0/22",
+			"103.22.200.0/22",
+			"103.31.4.0/22",
+			"141.101.64.0/18",
+			"108.162.192.0/18"
+			"190.93.240.0/20",
+			"188.114.96.0/20",
+			"197.234.240.0/22",
+			"198.41.128.0/17",
+			"162.158.0.0/15",
+			"104.16.0.0/13",
+			"104.24.0.0/14",
+			"172.64.0.0/13",
+			"131.0.72.0/22",
+		})
+
 		if err != nil {
 			if ips.Load() == nil {
 				// fatal because it's our first time doing this
-				log.Fatalln("failed to fecth Cloudflare IPv4s:", err)
+				log.Fatalln("failed to fetch Cloudflare IPv4s:", err)
 			}
 			log.Println("failed to update Cloudflare IPv4s:", err)
 			return nil
 		}
-		ipv6, err := loadIPs("https://www.cloudflare.com/ips-v6")
+
+		ipv6, err := loadIPs([]string{
+			"2400:cb00::/32",
+			"2606:4700::/32",
+			"2803:f800::/32",
+			"2405:b500::/32",
+			"2405:8100::/32",
+			"2a06:98c0::/29",
+			"2c0f:f248::/32",
+		})
 		if err != nil {
 			if ips.Load() == nil {
 				// fatal because it's our first time doing this
@@ -134,36 +160,13 @@ func updateIPs() []net.IPNet {
 	return ips.Load().([]net.IPNet)
 }
 
-func loadIPs(url string) ([]net.IPNet, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	defer cancel()
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	res, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer res.Body.Close()
-
-	if res.StatusCode != http.StatusOK {
-		return nil, errors.New(res.Status)
-	}
-
-	var ips []net.IPNet
-	scanner := bufio.NewScanner(res.Body)
-	for scanner.Scan() {
-		_, n, err := net.ParseCIDR(scanner.Text())
+func loadIPs(plain []string) ([]net.IPNet, error) {
+	for _, index := range plain {
+		_, n, err := net.ParseCIDR(index)
 		if err != nil {
 			return nil, err
 		}
 		ips = append(ips, *n)
-	}
-	if err := scanner.Err(); err != nil {
-		return nil, err
 	}
 	return ips, err
 }
